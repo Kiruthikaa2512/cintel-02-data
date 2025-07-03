@@ -2,7 +2,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.express as px
 from palmerpenguins import load_penguins
-from shiny import App, ui, render
+from shiny import App, ui, render, reactive
 from shinywidgets import render_plotly, output_widget
 
 penguins = load_penguins()
@@ -19,6 +19,7 @@ app_ui = ui.page_sidebar(
         ),
 
         ui.input_numeric("plotly_bin_count", "Number of Plotly Histogram Bins", 20),
+        ui.p("This controls how many bins the Plotly histogram will display."),
 
         ui.input_slider("seaborn_bin_count", "Number of Seaborn Bins", 1, 100, 20),
 
@@ -35,6 +36,9 @@ app_ui = ui.page_sidebar(
         ui.a("GitHub", href="https://github.com/Kiruthikaa2512/cintel-02-data", target="_blank")
     ),
 
+    ui.markdown("**Instructions:** Use dropdowns to explore the data visually."),
+    ui.download_button("download_data", "Download Filtered Data"),
+
     # Main Content
     ui.layout_columns(
         ui.output_data_frame("data_table"),
@@ -42,13 +46,13 @@ app_ui = ui.page_sidebar(
     ),
 
     ui.layout_columns(
-        output_widget("plotly_hist"), 
+        output_widget("plotly_hist"),
         ui.output_plot("seaborn_hist")
     ),
 
     ui.card(
         ui.card_header("Plotly Scatterplot: Species"),
-        output_widget("plotly_scatterplot"),  
+        output_widget("plotly_scatterplot"),
         full_screen=True
     ),
 
@@ -56,6 +60,8 @@ app_ui = ui.page_sidebar(
 )
 
 def server(input, output, session):
+
+    @reactive.Calc
     def filtered_data():
         return penguins[penguins["species"].isin(input.selected_species_list())]
 
@@ -108,5 +114,10 @@ def server(input, output, session):
             },
             size_max=8
         )
+
+    @output
+    @render.download(filename="filtered_penguins.csv")
+    def download_data():
+        yield filtered_data().to_csv(index=False)
 
 app = App(app_ui, server)
